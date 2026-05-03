@@ -1,3 +1,4 @@
+import numpy as np
 import argparse
 from pathlib import Path
 
@@ -10,57 +11,67 @@ DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "data" / "interim" / "preprocessed"
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
 
 
-def preprocess_image(input_path: Path, save_steps_dir: Path | None = None):
+def imwrite_unicode(path: Path, image: np.ndarray):
+    """Сохраняет изображение с поддержкой кириллических путей"""
+    # Кодируем изображение в байты PNG
+    success, encoded = c.imencode('.png', image)
+    if success:
+        # Записываем байты в файл (Path.write_bytes работает с Unicode)
+        path.write_bytes(encoded.tobytes())
+        return True
+    return False
 
-    image = c.imread(str(input_path)) # Открываем картинку и переводим путь в строку
+
+def preprocess_image(input_path: Path, save_steps_dir: Path | None = None):
+    # Читаем файл через numpy в обход проблемы с кириллицей
+    with open(str(input_path), 'rb') as f:
+        file_bytes = np.asarray(bytearray(f.read()), dtype=np.uint8)
+        image = c.imdecode(file_bytes, c.IMREAD_COLOR)
 
     if image is None:
         raise ValueError(f"Ошибка чтения изображения: {input_path}")
 
-    gray = c.cvtColor(image, c.COLOR_BGR2GRAY) # Переводим изобрежение в серый цвет
+    gray = c.cvtColor(image, c.COLOR_BGR2GRAY)
 
     binary = c.adaptiveThreshold(
-        gray, # Входное изображение
-        255, # Макс значение белого пикселя
-        c.ADAPTIVE_THRESH_GAUSSIAN_C, # Порог считается по соседним пикселям
-        c.THRESH_BINARY, # Черный текст на белом фоне
-        31, # Размер окна; 11 слишком сильно рвет мелкие символы
-        8, # Константа, вычитаемая из порога
+        gray,
+        255,
+        c.ADAPTIVE_THRESH_GAUSSIAN_C,
+        c.THRESH_BINARY,
+        31,
+        8,
     )
-
-    # Для этого датасета medianBlur(binary, 3) портит мелкие формулы:
-    # съедает тонкие линии дробей, индексы и буквы.
 
     if save_steps_dir is not None:
         save_steps_dir.mkdir(parents=True, exist_ok=True)
-        c.imwrite(str(save_steps_dir / f"{input_path.stem}_gray.png"), gray)
-        c.imwrite(str(save_steps_dir / f"{input_path.stem}_binary.png"), binary)
-        c.imwrite(str(save_steps_dir / f"{input_path.stem}_binary_inverted.png"), 255 - binary)
+        imwrite_unicode(save_steps_dir / f"{input_path.stem}_gray.png", gray)
+        imwrite_unicode(save_steps_dir / f"{input_path.stem}_binary.png", binary)
+        imwrite_unicode(save_steps_dir / f"{input_path.stem}_binary_inverted.png", 255 - binary)
 
     return binary
 
-def preprocess_folder(input_dir: Path, output_dir: Path, save_steps: bool = False):
 
-    output_dir.mkdir(parents=True, exist_ok=True) # Обрабатываем папку
+def preprocess_folder(input_dir: Path, output_dir: Path, save_steps: bool = False):
+    output_dir.mkdir(parents=True, exist_ok=True)
     steps_dir = output_dir / "steps" if save_steps else None
 
     processed_count = 0
 
     for image_path in sorted(input_dir.iterdir()):
-
-        if image_path.suffix.lower() not in IMAGE_EXTENSIONS: # Пропуск некартинок
+        if image_path.suffix.lower() not in IMAGE_EXTENSIONS:
             continue
 
         processed = preprocess_image(image_path, save_steps_dir=steps_dir)
 
         output_path = output_dir / f"{image_path.stem}_preprocessed.png"
-        c.imwrite(str(output_path), processed)
+        imwrite_unicode(output_path, processed)
         processed_count += 1
 
         print(f"Saved: {output_path}")
 
     if processed_count == 0:
         print(f"Картинок в папке {input_dir} нет :D")
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -76,6 +87,7 @@ def main():
         output_dir=args.output,
         save_steps=args.save_steps,
     )
+
 
 if __name__ == "__main__":
     main()
