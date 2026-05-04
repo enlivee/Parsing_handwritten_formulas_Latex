@@ -2,8 +2,8 @@ import torch
 
 class Config:
     # ================== Данные ==================
-    csv_path = "image_to_text/data/real_handwritten.csv"
-    image_base_dir = "image_to_text/data/real_images"
+    csv_path = "image_to_text/data/latex_equation_groundtruth.csv"
+    image_base_dir = "image_to_text/data/images"
     model_save_path = "image_to_text/checkpoints/best_model.pth"
 
     # изображения

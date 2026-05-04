@@ -15,10 +15,18 @@ def fixed_crop(img, crop_left, crop_right, crop_top, crop_bottom):
     return img[y1:y2, x1:x2]
 
 def auto_crop_to_content(img, pad_left, pad_right, pad_top, pad_bottom):
-    _, thresh = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    # Приводим к uint8, если картинка float32
+    if img.dtype == np.float32:
+        img_for_thresh = img.astype(np.uint8)
+    else:
+        img_for_thresh = img
+
+    _, thresh = cv2.threshold(img_for_thresh, 0, 255,
+                             cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     y_coords, x_coords = np.where(thresh == 255)
     if len(y_coords) == 0:
         return img
+
     y_min, y_max = y_coords.min(), y_coords.max()
     x_min, x_max = x_coords.min(), x_coords.max()
     h, w = img.shape[:2]
@@ -26,7 +34,7 @@ def auto_crop_to_content(img, pad_left, pad_right, pad_top, pad_bottom):
     x2 = min(w, x_max + pad_right + 1)
     y1 = max(0, y_min - pad_top)
     y2 = min(h, y_max + pad_bottom + 1)
-    return img[y1:y2, x1:x2]
+    return img[y1:y2, x1:x2]   # тип возвращаемого изображения остаётся исходным (float32)
 
 def apply_crop_pipeline(img, cfg):
     img = fixed_crop(img, cfg.crop_left, cfg.crop_right, cfg.crop_top, cfg.crop_bottom)
