@@ -2,9 +2,9 @@ import torch
 
 class Config:
     # ================== Данные ==================
-    csv_path = "./data/real_handwritten.csv"
-    image_base_dir = "./data/real_images"
-    model_save_path = "./checkpoints/best_model.pth"
+    csv_path = "image_to_text/data/real_handwritten.csv"
+    image_base_dir = "image_to_text/data/real_images"
+    model_save_path = "image_to_text/checkpoints/best_model.pth"
 
     # изображения
     img_height = 94
