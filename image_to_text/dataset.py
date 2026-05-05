@@ -40,9 +40,10 @@ class Im2LatexDataset(Dataset):
         return img.astype(np.float32)
 
     def __getitem__(self, idx):
-        img = cv2.imread(self.image_paths[idx], cv2.IMREAD_GRAYSCALE).astype(np.float32)
+        img = cv2.imread(self.image_paths[idx], cv2.IMREAD_GRAYSCALE)
         if img is None:
             raise FileNotFoundError(f"Image not found: {self.image_paths[idx]}")
+        img = img.astype(np.float32)
 
         if self.do_crop:
             img = apply_crop_pipeline(img, self.cfg)
@@ -62,7 +63,14 @@ class Im2LatexDataset(Dataset):
 
 def load_data(csv_path, base_image_dir=None):
     df = pd.read_csv(csv_path)
-    df = df[['image_path', 'equation']].dropna()
+    formula_col_candidates = ("equation", "latex_gt", "latex", "formula")
+    formula_col = next((col for col in formula_col_candidates if col in df.columns), None)
+    if "image_path" not in df.columns or formula_col is None:
+        raise ValueError(
+            f"CSV {csv_path} must contain 'image_path' and one of {formula_col_candidates}. "
+            f"Available columns: {list(df.columns)}"
+        )
+    df = df[["image_path", formula_col]].dropna()
     image_paths = []
     formulas = []
     for _, row in df.iterrows():
@@ -71,5 +79,5 @@ def load_data(csv_path, base_image_dir=None):
             img_path = os.path.join(base_image_dir, img_path)
         if os.path.exists(img_path):
             image_paths.append(img_path)
-            formulas.append(str(row['equation']).strip())
+            formulas.append(str(row[formula_col]).strip())
     return image_paths, formulas

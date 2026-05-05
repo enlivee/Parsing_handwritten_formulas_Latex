@@ -15,7 +15,12 @@ def fixed_crop(img, crop_left, crop_right, crop_top, crop_bottom):
     return img[y1:y2, x1:x2]
 
 def auto_crop_to_content(img, pad_left, pad_right, pad_top, pad_bottom):
-    _, thresh = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    # OTSU работает только с uint8/uint16, поэтому нормализуем тип входа.
+    if img.dtype != np.uint8:
+        img_for_thresh = np.clip(img, 0, 255).astype(np.uint8)
+    else:
+        img_for_thresh = img
+    _, thresh = cv2.threshold(img_for_thresh, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     y_coords, x_coords = np.where(thresh == 255)
     if len(y_coords) == 0:
         return img
@@ -40,9 +45,10 @@ def prepare_image(image_path, cfg, do_crop=True):
     Загружает изображение, (опционально) обрезает, ресайзит, нормализует.
     Возвращает тензор (1, 1, H, W).
     """
-    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE).astype(np.float32)
+    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
     if img is None:
         raise FileNotFoundError(f"Image not found: {image_path}")
+    img = img.astype(np.float32)
     if do_crop:
         img = apply_crop_pipeline(img, cfg)
     img = cv2.resize(img, (cfg.img_width, cfg.img_height))

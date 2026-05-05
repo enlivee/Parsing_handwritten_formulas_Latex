@@ -34,7 +34,10 @@ def train():
 
     # Загрузка данных
     img_paths, formulas = load_data(Config.csv_path, Config.image_base_dir)
+    if len(img_paths) < 2:
+        raise ValueError(f"Need at least 2 valid samples, found {len(img_paths)}")
     split = int(len(img_paths) * 0.9)
+    split = max(1, min(split, len(img_paths) - 1))
     train_paths, train_forms = img_paths[:split], formulas[:split]
     val_paths, val_forms = img_paths[split:], formulas[split:]
 
@@ -52,9 +55,12 @@ def train():
     optimizer = torch.optim.Adam(model.parameters(), lr=Config.lr)
     criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_id)
     start_epoch = 1
-    best_val_em = 0.0
+    best_val_em = -1.0
+    os.makedirs(os.path.dirname(Config.model_save_path), exist_ok=True)
 
-    if args.resume and os.path.isfile(args.resume):
+    if args.resume:
+        if not os.path.isfile(args.resume):
+            raise FileNotFoundError(f"Checkpoint not found: {args.resume}")
         print(f"Загрузка чекпоинта {args.resume}")
         checkpoint = torch.load(args.resume, map_location=Config.device)
         model.load_state_dict(checkpoint['model_state_dict'])
@@ -78,6 +84,8 @@ def train():
             optimizer.step()
             train_loss += loss.item()
             pbar.set_postfix({'loss': loss.item()})
+        if len(train_loader) == 0:
+            raise ValueError("Training loader is empty. Check dataset paths and batch_size.")
         train_loss /= len(train_loader)
 
         val_metrics = compute_metrics(model, val_loader, criterion, Config.device)

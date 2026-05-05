@@ -1,9 +1,11 @@
 import torch
+import os
 
 class Config:
     # ================== Данные ==================
-    csv_path = "image_to_text/data/real_handwritten.csv"
-    image_base_dir = "image_to_text/data/real_images"
+    dataset_root = "/Users/emmat/.cache/kagglehub/datasets/mssjss/fastmathxassumption-2025-handwritten-math-to-latex/versions/1"
+    csv_path = os.path.join(dataset_root, "latex_equation_groundtruth.csv")
+    image_base_dir = os.path.join(dataset_root, "paper")
     model_save_path = "image_to_text/checkpoints/best_model.pth"
 
     # изображения
@@ -44,7 +46,7 @@ class Config:
 
     # ================== Обучение ==================
     batch_size = 16
-    epochs = 100
+    epochs = 8
     lr = 1e-3
     teacher_forcing_ratio = 0.5
     max_seq_len = 200

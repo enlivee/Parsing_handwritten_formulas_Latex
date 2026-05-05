@@ -19,6 +19,13 @@ def pad_collate(batch):
 @torch.no_grad()
 def compute_metrics(model, loader, criterion, device):
     model.eval()
+    if len(loader) == 0:
+        return {
+            'loss': 0.0,
+            'exact_match': 0.0,
+            'avg_edit_distance': 1.0,
+            'bleu-4': 0.0
+        }
     total_loss = 0
     all_preds = []
     all_targets = []
